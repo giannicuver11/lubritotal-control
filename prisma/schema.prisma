@@ -1,0 +1,289 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          UserRole  @default(VENDEDOR)
+  image         String?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sales         Sale[]
+  workOrders    WorkOrder[]
+  movements     InventoryMovement[]
+  auditLogs     AuditLog[]
+  settings      Setting[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  DESARROLLADOR
+  VENDEDOR
+  MECANICO
+}
+
+model Category {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  slug        String          @unique
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  products    Product[]
+  subcategories Subcategory[]
+
+  @@map("categories")
+}
+
+model Subcategory {
+  id          String    @id @default(cuid())
+  name        String
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  products    Product[]
+
+  @@map("subcategories")
+}
+
+model Brand {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  slug        String    @unique
+  createdAt   DateTime  @default(now())
+
+  products    Product[]
+
+  @@map("brands")
+}
+
+model Product {
+  id            String              @id @default(cuid())
+  code          String              @unique
+  name          String
+  description   String?
+  categoryId    String
+  category      Category            @relation(fields: [categoryId], references: [id])
+  subcategoryId String?
+  subcategory   Subcategory?        @relation(fields: [subcategoryId], references: [id])
+  brandId       String?
+  brand         Brand?              @relation(fields: [brandId], references: [id])
+  buyPrice      Decimal             @default(0)
+  sellPrice     Decimal             @default(0)
+  stock         Int                 @default(0)
+  minStock      Int                 @default(5)
+  location      String?
+  active        Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  compatibleVehicles VehicleCompatibility[]
+  saleDetails        SaleDetail[]
+  workOrderParts     WorkOrderPart[]
+  movements          InventoryMovement[]
+  stockHistory       StockHistory[]
+
+  @@map("products")
+}
+
+model VehicleModel {
+  id        String   @id @default(cuid())
+  brand     String
+  model     String
+  year      Int?
+  createdAt DateTime @default(now())
+
+  compatibilities VehicleCompatibility[]
+
+  @@unique([brand, model])
+  @@map("vehicle_models")
+}
+
+model VehicleCompatibility {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vehicleModelId String
+  vehicleModel VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, vehicleModelId])
+  @@map("vehicle_compatibilities")
+}
+
+model Client {
+  id          String      @id @default(cuid())
+  name        String
+  rut         String?     @unique
+  phone       String?
+  address     String?
+  company     String?
+  email       String?
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  vehicles    Vehicle[]
+  sales       Sale[]
+  workOrders  WorkOrder[]
+
+  @@map("clients")
+}
+
+model Vehicle {
+  id          String      @id @default(cuid())
+  plate       String      @unique
+  brand       String
+  model       String
+  year        Int?
+  mileage     Int?
+  clientId    String
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  workOrders  WorkOrder[]
+
+  @@map("vehicles")
+}
+
+model Sale {
+  id          String      @id @default(cuid())
+  number      Int         @default(0)
+  clientId    String?
+  client      Client?     @relation(fields: [clientId], references: [id])
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  total       Decimal     @default(0)
+  subtotal    Decimal     @default(0)
+  createdAt   DateTime    @default(now())
+
+  details     SaleDetail[]
+
+  @@map("sales")
+}
+
+model SaleDetail {
+  id        String   @id @default(cuid())
+  saleId    String
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  price     Decimal  @default(0)
+  subtotal  Decimal  @default(0)
+
+  @@map("sale_details")
+}
+
+model WorkOrder {
+  id          String          @id @default(cuid())
+  number      Int             @default(0)
+  clientId    String
+  client      Client          @relation(fields: [clientId], references: [id])
+  vehicleId   String
+  vehicle     Vehicle         @relation(fields: [vehicleId], references: [id])
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  mileage     Int?
+  diagnosis   String?
+  workDone    String?
+  laborCost   Decimal         @default(0)
+  total       Decimal         @default(0)
+  status      OrderStatus     @default(PENDIENTE)
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  parts       WorkOrderPart[]
+
+  @@map("work_orders")
+}
+
+enum OrderStatus {
+  PENDIENTE
+  EN_PROCESO
+  FINALIZADA
+  ENTREGADA
+}
+
+model WorkOrderPart {
+  id          String     @id @default(cuid())
+  workOrderId String
+  workOrder   WorkOrder  @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product    @relation(fields: [productId], references: [id])
+  quantity    Int        @default(1)
+  price       Decimal    @default(0)
+  subtotal    Decimal    @default(0)
+
+  @@map("work_order_parts")
+}
+
+model InventoryMovement {
+  id          String          @id @default(cuid())
+  productId   String
+  product     Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  type        MovementType
+  quantity    Int
+  reason      String?
+  reference   String?
+  createdAt   DateTime        @default(now())
+
+  @@map("inventory_movements")
+}
+
+enum MovementType {
+  ENTRADA
+  SALIDA
+  AJUSTE
+}
+
+model StockHistory {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+  date      DateTime @default(now())
+
+  @@map("stock_history")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  action      String
+  entity      String?
+  entityId    String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model Setting {
+  id      String @id @default(cuid())
+  key     String @unique
+  value   String
+  userId  String?
+  user    User?  @relation(fields: [userId], references: [id])
+
+  @@map("settings")
+}
