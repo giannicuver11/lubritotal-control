@@ -7,22 +7,50 @@ import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import { productSchema } from "@/lib/validations"
 
-export async function getProducts(search?: string, categoryId?: string, brandId?: string) {
+export interface ProductFilters {
+  search?: string
+  categoryId?: string
+  brandId?: string
+  subcategoryId?: string
+  viscosity?: string
+  technology?: string
+  tireType?: string
+  tireMeasure?: string
+  amperage?: string
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
+}
+
+export async function getProducts(filters: ProductFilters = {}) {
   try {
     const where: Prisma.ProductWhereInput = { active: true }
-    if (search) {
+    if (filters.search) {
       where.OR = [
-        { name: { contains: search,  } },
-        { code: { contains: search,  } },
+        { name: { contains: filters.search } },
+        { code: { contains: filters.search } },
       ]
     }
-    if (categoryId) where.categoryId = categoryId
-    if (brandId) where.brandId = brandId
+    if (filters.categoryId) where.categoryId = filters.categoryId
+    if (filters.brandId) where.brandId = filters.brandId
+    if (filters.subcategoryId) where.subcategoryId = filters.subcategoryId
+    if (filters.viscosity) where.viscosity = filters.viscosity
+    if (filters.technology) where.technology = filters.technology
+    if (filters.tireType) where.tireType = filters.tireType
+    if (filters.tireMeasure) where.tireMeasure = filters.tireMeasure
+    if (filters.amperage) where.amperage = filters.amperage
+
+    let orderBy: Prisma.ProductOrderByWithRelationInput = { name: "asc" }
+    const sortOrder = filters.sortOrder || "asc"
+    if (filters.sortBy === "sellPrice" || filters.sortBy === "buyPrice") {
+      orderBy = { [filters.sortBy]: sortOrder }
+    } else if (filters.sortBy === "stock") {
+      orderBy = { stock: sortOrder }
+    }
 
     return await prisma.product.findMany({
       where,
       include: { category: true, brand: true, subcategory: true },
-      orderBy: { name: "asc" },
+      orderBy,
     })
   } catch (error) {
     return { error: "Error al obtener productos" }
@@ -49,7 +77,7 @@ export async function createProduct(data: z.infer<typeof productSchema>) {
     if (!user) return { error: "No autorizado" }
 
     const parsed = productSchema.parse(data)
-    const product = await prisma.product.create({ data: parsed })
+    const product = await prisma.product.create({ data: parsed as any })
 
     await prisma.stockHistory.create({
       data: { productId: product.id, quantity: parsed.stock },
@@ -70,7 +98,7 @@ export async function updateProduct(id: string, data: Partial<z.infer<typeof pro
   try {
     const product = await prisma.product.update({
       where: { id },
-      data,
+      data: data as any,
     })
     revalidatePath("/dashboard/products")
     return product
@@ -130,4 +158,3 @@ export async function adjustStock(id: string, quantity: number, type: "ENTRADA" 
     return { error: "Error al ajustar stock" }
   }
 }
-

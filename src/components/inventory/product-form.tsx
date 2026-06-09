@@ -55,6 +55,14 @@ interface Product {
   stock: number
   minStock: number
   location: string | null
+  viscosity?: string | null
+  technology?: string | null
+  presentation?: string | null
+  tireType?: string | null
+  tireMeasure?: string | null
+  amperage?: string | null
+  voltage?: string | null
+  engineType?: string | null
 }
 
 interface ProductFormProps {
@@ -64,28 +72,34 @@ interface ProductFormProps {
   onSuccess?: () => void
 }
 
+const PRESENTACIONES = ["1L", "4L", "5L", "20L", "208L"]
+const VISCOSIDADES = ["0W20", "0W30", "0W40", "5W20", "5W30", "5W40", "10W30", "10W40", "15W40", "20W50", "75W80", "75W90", "80W90", "85W140", "ATF", "CVTF", "ISO 32", "ISO 46", "ISO 68"]
+const TECNOLOGIAS = ["Sintético", "Semi Sintético", "Mineral"]
+const TIRE_TYPES = ["Touring", "Performance", "Premium", "HT", "AT", "MT", "Commercial"]
+const AMPERAJES = ["45Ah", "55Ah", "60Ah", "65Ah", "75Ah", "90Ah", "100Ah", "150Ah"]
+const VOLTAJES = ["12V", "24V"]
+
+const CAT_ACEITES = "Aceites"
+const CAT_FILTROS = "Filtros"
+const CAT_NEUMATICOS = "Neumaticos"
+const CAT_BATERIAS = "Baterias"
+
 export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductFormProps) {
   const [categories, setCategories] = useState<Category[]>([])
   const [subcategories, setSubcategories] = useState<Subcategory[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
   const [saving, setSaving] = useState(false)
+  const [catName, setCatName] = useState("")
 
   const isEditing = !!product
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      code: "",
-      name: "",
-      categoryId: "",
-      subcategoryId: "",
-      brandId: "",
-      buyPrice: 0,
-      sellPrice: 0,
-      stock: 0,
-      minStock: 0,
-      location: "",
-      description: "",
+      code: "", name: "", categoryId: "", subcategoryId: "", brandId: "",
+      buyPrice: 0, sellPrice: 0, stock: 0, minStock: 0, location: "", description: "",
+      viscosity: "", technology: "", presentation: "",
+      tireType: "", tireMeasure: "", amperage: "", voltage: "", engineType: "",
     },
   })
 
@@ -103,7 +117,13 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
       ? `/api/brands?categoryId=${selectedCategoryId}`
       : "/api/brands"
     fetch(url).then((r) => r.json()).then(setBrands).catch(() => {})
-  }, [selectedCategoryId])
+    if (selectedCategoryId) {
+      const cat = categories.find((c) => c.id === selectedCategoryId)
+      setCatName(cat?.name || "")
+    } else {
+      setCatName("")
+    }
+  }, [selectedCategoryId, categories])
 
   useEffect(() => {
     if (!open) return
@@ -120,16 +140,29 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
         minStock: product.minStock,
         location: product.location || "",
         description: product.description || "",
+        viscosity: product.viscosity || "",
+        technology: product.technology || "",
+        presentation: product.presentation || "",
+        tireType: product.tireType || "",
+        tireMeasure: product.tireMeasure || "",
+        amperage: product.amperage || "",
+        voltage: product.voltage || "",
+        engineType: product.engineType || "",
       })
       loadSubcategories(product.categoryId)
+      const cat = categories.find((c) => c.id === product.categoryId)
+      setCatName(cat?.name || "")
     } else {
       reset({
         code: "", name: "", categoryId: "", subcategoryId: "", brandId: "",
         buyPrice: 0, sellPrice: 0, stock: 0, minStock: 0, location: "", description: "",
+        viscosity: "", technology: "", presentation: "",
+        tireType: "", tireMeasure: "", amperage: "", voltage: "", engineType: "",
       })
       setSubcategories([])
+      setCatName("")
     }
-  }, [product, open, reset])
+  }, [product, open, reset, categories])
 
   const loadSubcategories = async (categoryId: string) => {
     if (!categoryId) { setSubcategories([]); return }
@@ -163,6 +196,14 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
           ...data,
           subcategoryId: data.subcategoryId || null,
           brandId: data.brandId || null,
+          viscosity: data.viscosity || null,
+          technology: data.technology || null,
+          presentation: data.presentation || null,
+          tireType: data.tireType || null,
+          tireMeasure: data.tireMeasure || null,
+          amperage: data.amperage || null,
+          voltage: data.voltage || null,
+          engineType: data.engineType || null,
         }),
       })
       if (!res.ok) {
@@ -181,6 +222,8 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
       setSaving(false)
     }
   }
+
+  const isCat = (name: string) => catName.toLowerCase() === name.toLowerCase()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,19 +294,129 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
             </div>
             <div className="space-y-2">
               <Label htmlFor="location">Ubicación</Label>
-              <Input id="location" {...register("location")} placeholder="Ej: Estante A3" />
+              <Input id="location" {...register("location")} placeholder="Ej: Rack A-A01" />
             </div>
           </div>
+
+          {isCat(CAT_ACEITES) && (
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Viscosidad</Label>
+                <Select
+                  value={watch("viscosity") || ""}
+                  onValueChange={(v) => setValue("viscosity", v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>
+                    {VISCOSIDADES.map((v) => (
+                      <SelectItem key={v} value={v}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Tecnología</Label>
+                <Select
+                  value={watch("technology") || ""}
+                  onValueChange={(v) => setValue("technology", v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>
+                    {TECNOLOGIAS.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Presentación</Label>
+                <Select
+                  value={watch("presentation") || ""}
+                  onValueChange={(v) => setValue("presentation", v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>
+                    {PRESENTACIONES.map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {isCat(CAT_FILTROS) && (
+            <div className="space-y-2">
+              <Label htmlFor="engineType">Motor Compatible</Label>
+              <Input id="engineType" {...register("engineType")} placeholder="Ej: 2.4 Diesel" />
+            </div>
+          )}
+
+          {isCat(CAT_NEUMATICOS) && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select
+                  value={watch("tireType") || ""}
+                  onValueChange={(v) => setValue("tireType", v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>
+                    {TIRE_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tireMeasure">Medida</Label>
+                <Input id="tireMeasure" {...register("tireMeasure")} placeholder="Ej: 225/65R17" />
+              </div>
+            </div>
+          )}
+
+          {isCat(CAT_BATERIAS) && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Amperaje</Label>
+                <Select
+                  value={watch("amperage") || ""}
+                  onValueChange={(v) => setValue("amperage", v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>
+                    {AMPERAJES.map((a) => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Voltaje</Label>
+                <Select
+                  value={watch("voltage") || ""}
+                  onValueChange={(v) => setValue("voltage", v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>
+                    {VOLTAJES.map((v) => (
+                      <SelectItem key={v} value={v}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="buyPrice">Precio Compra</Label>
-              <Input id="buyPrice" type="number" step="0.01" {...register("buyPrice", { valueAsNumber: true })} />
+              <Input id="buyPrice" type="number" step="1" {...register("buyPrice", { valueAsNumber: true })} />
               {errors.buyPrice && <p className="text-xs text-destructive">{errors.buyPrice.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="sellPrice">Precio Venta</Label>
-              <Input id="sellPrice" type="number" step="0.01" {...register("sellPrice", { valueAsNumber: true })} />
+              <Input id="sellPrice" type="number" step="1" {...register("sellPrice", { valueAsNumber: true })} />
               {errors.sellPrice && <p className="text-xs text-destructive">{errors.sellPrice.message}</p>}
             </div>
           </div>
@@ -299,4 +452,3 @@ export function ProductForm({ open, onOpenChange, product, onSuccess }: ProductF
     </Dialog>
   )
 }
-

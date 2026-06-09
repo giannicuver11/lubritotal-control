@@ -7,6 +7,13 @@ export async function GET(request: NextRequest) {
   const categoryId = searchParams.get("categoryId") || ""
   const brandId = searchParams.get("brandId") || ""
   const subcategoryId = searchParams.get("subcategoryId") || ""
+  const viscosity = searchParams.get("viscosity") || ""
+  const technology = searchParams.get("technology") || ""
+  const tireType = searchParams.get("tireType") || ""
+  const tireMeasure = searchParams.get("tireMeasure") || ""
+  const amperage = searchParams.get("amperage") || ""
+  const sortBy = searchParams.get("sortBy") || ""
+  const sortOrder = searchParams.get("sortOrder") || "asc"
 
   const where: any = { active: true }
 
@@ -19,12 +26,24 @@ export async function GET(request: NextRequest) {
   if (categoryId) where.categoryId = categoryId
   if (brandId) where.brandId = brandId
   if (subcategoryId) where.subcategoryId = subcategoryId
+  if (viscosity) where.viscosity = viscosity
+  if (technology) where.technology = technology
+  if (tireType) where.tireType = tireType
+  if (tireMeasure) where.tireMeasure = tireMeasure
+  if (amperage) where.amperage = amperage
+
+  let orderBy: any = { updatedAt: "desc" }
+  if (sortBy === "sellPrice" || sortBy === "buyPrice") {
+    orderBy = { [sortBy]: sortOrder }
+  } else if (sortBy === "stock") {
+    orderBy = { stock: sortOrder }
+  }
 
   try {
     const products = await prisma.product.findMany({
       where,
       include: { category: true, brand: true, subcategory: true },
-      orderBy: { updatedAt: "desc" },
+      orderBy,
     })
     return NextResponse.json(products)
   } catch {
@@ -48,6 +67,14 @@ export async function POST(request: Request) {
         stock: body.stock || 0,
         minStock: body.minStock || 0,
         location: body.location,
+        viscosity: body.viscosity || null,
+        technology: body.technology || null,
+        presentation: body.presentation || null,
+        tireType: body.tireType || null,
+        tireMeasure: body.tireMeasure || null,
+        amperage: body.amperage || null,
+        voltage: body.voltage || null,
+        engineType: body.engineType || null,
       },
       include: { category: true, brand: true },
     })
@@ -59,4 +86,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Error al crear producto" }, { status: 500 })
   }
 }
-

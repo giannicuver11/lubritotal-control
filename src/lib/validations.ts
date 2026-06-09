@@ -17,6 +17,14 @@ export const productSchema = z.object({
   minStock: z.coerce.number().int().min(0, "Stock mínimo inválido"),
   location: z.string().optional(),
   description: z.string().optional(),
+  viscosity: z.string().optional(),
+  technology: z.string().optional(),
+  presentation: z.string().optional(),
+  tireType: z.string().optional(),
+  tireMeasure: z.string().optional(),
+  amperage: z.string().optional(),
+  voltage: z.string().optional(),
+  engineType: z.string().optional(),
 });
 
 export const clientSchema = z.object({
@@ -48,4 +56,3 @@ export const workOrderSchema = z.object({
   notes: z.string().optional(),
   status: z.enum(["PENDIENTE", "EN_PROCESO", "FINALIZADA", "ENTREGADA"]).optional(),
 });
-

@@ -9,7 +9,7 @@ export async function GET(
   try {
     const product = await prisma.product.findUnique({
       where: { id },
-      include: { category: true, brand: true },
+      include: { category: true, brand: true, subcategory: true },
     })
     if (!product) {
       return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 })
@@ -40,6 +40,14 @@ export async function PUT(
         sellPrice: body.sellPrice,
         minStock: body.minStock,
         location: body.location,
+        viscosity: body.viscosity || null,
+        technology: body.technology || null,
+        presentation: body.presentation || null,
+        tireType: body.tireType || null,
+        tireMeasure: body.tireMeasure || null,
+        amperage: body.amperage || null,
+        voltage: body.voltage || null,
+        engineType: body.engineType || null,
       },
       include: { category: true, brand: true },
     })
@@ -64,4 +72,3 @@ export async function DELETE(
     return NextResponse.json({ error: "Error al eliminar producto" }, { status: 500 })
   }
 }
-

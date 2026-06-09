@@ -88,6 +88,14 @@ model Product {
   stock         Int                 @default(0)
   minStock      Int                 @default(5)
   location      String?
+  viscosity     String?
+  technology    String?
+  presentation  String?
+  tireType      String?
+  tireMeasure   String?
+  amperage      String?
+  voltage       String?
+  engineType    String?
   active        Boolean             @default(true)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
