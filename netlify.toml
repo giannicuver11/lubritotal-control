@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "npx prisma generate && npm run build"
   publish = ".next"
 
 [[redirects]]
@@ -9,4 +9,3 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  DATABASE_URL = "file:./prisma/dev.db"
