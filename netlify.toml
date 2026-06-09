@@ -1,5 +1,5 @@
 [build]
-  command = "npx prisma db push && npx tsx prisma/seed.ts && npm run build"
+  command = "npx prisma db push && npx tsx prisma/seed.ts && mkdir -p .next/server && cp prisma/dev.db .next/server/ && npm run build"
   publish = ".next"
 
 [[redirects]]
@@ -10,3 +10,12 @@
 [build.environment]
   NODE_VERSION = "20"
   DATABASE_URL = "file:./dev.db"
+
+[context.production.environment]
+  DATABASE_URL = "file:../.next/dev.db"
+
+[context.deploy-preview.environment]
+  DATABASE_URL = "file:../.next/dev.db"
+
+[context.branch-deploy.environment]
+  DATABASE_URL = "file:../.next/dev.db"
