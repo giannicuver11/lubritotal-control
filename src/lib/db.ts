@@ -10,9 +10,10 @@ function getDatabaseUrl(): string {
   const { existsSync } = require("fs") as typeof import("fs")
   const cwd = process.cwd()
   const candidates = [
+    join(cwd, ".next", "prisma", "dev.db"),
     join(cwd, "prisma", "dev.db"),
-    join(cwd, "..", "prisma", "dev.db"),
-    join(cwd, "..", "..", "prisma", "dev.db"),
+    join(cwd, "..", ".next", "prisma", "dev.db"),
+    join(cwd, "..", "..", ".next", "prisma", "dev.db"),
   ]
   for (const p of candidates) {
     if (existsSync(p)) return `file:${resolve(p)}`
