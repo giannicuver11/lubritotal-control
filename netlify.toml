@@ -9,12 +9,3 @@
 
 [build.environment]
   NODE_VERSION = "20"
-
-[context.production.environment]
-  DATABASE_URL = "file:../.next/prisma/dev.db"
-
-[context.deploy-preview.environment]
-  DATABASE_URL = "file:../.next/prisma/dev.db"
-
-[context.branch-deploy.environment]
-  DATABASE_URL = "file:../.next/prisma/dev.db"
