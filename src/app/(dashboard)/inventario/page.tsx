@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -75,6 +75,8 @@ export default function InventarioPage() {
   const [brands, setBrands] = useState<Brand[]>([])
   const [subcategories, setSubcategories] = useState<Subcategory[]>([])
   const [search, setSearch] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  const searchTimer = useRef<NodeJS.Timeout | null>(null)
   const [categoryFilter, setCategoryFilter] = useState("")
   const [brandFilter, setBrandFilter] = useState("")
   const [subcategoryFilter, setSubcategoryFilter] = useState("")
@@ -94,7 +96,7 @@ export default function InventarioPage() {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (search) params.set("search", search)
+      if (debouncedSearch) params.set("search", debouncedSearch)
       if (categoryFilter) params.set("categoryId", categoryFilter)
       if (brandFilter) params.set("brandId", brandFilter)
       if (subcategoryFilter) params.set("subcategoryId", subcategoryFilter)
@@ -111,7 +113,7 @@ export default function InventarioPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, categoryFilter, brandFilter, subcategoryFilter, viscosityFilter, technologyFilter, tireTypeFilter, amperageFilter, sortBy, sortOrder])
+  }, [debouncedSearch, categoryFilter, brandFilter, subcategoryFilter, viscosityFilter, technologyFilter, tireTypeFilter, amperageFilter, sortBy, sortOrder])
 
   useEffect(() => { fetchProducts() }, [fetchProducts])
 
@@ -405,7 +407,11 @@ export default function InventarioPage() {
           <Input
             placeholder="Buscar por código o nombre..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              if (searchTimer.current) clearTimeout(searchTimer.current)
+              searchTimer.current = setTimeout(() => setDebouncedSearch(e.target.value), 300)
+            }}
           />
         </div>
       </div>

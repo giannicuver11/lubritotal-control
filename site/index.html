@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lubritotal Control</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+<div id="app"></div>
+<script>
+const DATA_URL = "data/productos.json"
+let data = null
+let user = null
+let catFilter = "", subFilter = "", brandFilter = "", searchTerm = ""
+let sortField = "", sortDir = "asc"
+
+const STATE = { LOGIN: "login", INVENTARIO: "inventario" }
+let state = STATE.LOGIN
+
+async function loadData() {
+  try {
+    const r = await fetch(DATA_URL)
+    data = await r.json()
+    render()
+  } catch (e) {
+    document.getElementById("app").innerHTML = `<div class="p-8 text-center text-red-600 text-xl">Error cargando datos: ${e.message}</div>`
+  }
+}
+
+function login(e) {
+  e.preventDefault()
+  const email = document.getElementById("email").value
+  const pass = document.getElementById("pass").value
+  if (email === "giannicuver11@gmail.com" && pass === "12345678") {
+    user = email
+    state = STATE.INVENTARIO
+    render()
+  } else {
+    document.getElementById("login-error").classList.remove("hidden")
+  }
+}
+
+function logout() {
+  user = null
+  state = STATE.LOGIN
+  render()
+}
+
+function applyFilters() {
+  if (!data) return []
+  return data.products.filter(p => {
+    if (!p.active) return false
+    if (catFilter && p.categoryId !== catFilter) return false
+    if (subFilter && p.subcategoryId !== subFilter) return false
+    if (brandFilter && p.brandId !== brandFilter) return false
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase()
+      if (!p.name.toLowerCase().includes(s) && !p.code.toLowerCase().includes(s)) return false
+    }
+    return true
+  }).sort((a, b) => {
+    if (!sortField) return 0
+    const av = a[sortField] ?? ""
+    const bv = b[sortField] ?? ""
+    const cmp = typeof av === "number" ? av - bv : String(av).localeCompare(String(bv))
+    return sortDir === "asc" ? cmp : -cmp
+  })
+}
+
+function fmt(n) { return new Intl.NumberFormat("es-CL").format(n) }
+
+function render() {
+  const app = document.getElementById("app")
+  if (state === STATE.LOGIN) {
+    app.innerHTML = renderLogin()
+    return
+  }
+  app.innerHTML = renderInventario()
+  attachEventListeners()
+}
+
+function renderLogin() {
+  return `
+    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-blue-900">
+      <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        <div class="text-center mb-8">
+          <i class="fas fa-oil-can text-5xl text-blue-600 mb-4"></i>
+          <h1 class="text-3xl font-bold text-gray-800">Lubritotal</h1>
+          <p class="text-gray-500">Control de Inventario</p>
+        </div>
+        <form onsubmit="login(event)">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input id="email" type="email" value="giannicuver11@gmail.com" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+          </div>
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+            <input id="pass" type="password" value="12345678" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+          </div>
+          <p id="login-error" class="text-red-500 text-sm mb-3 hidden">Email o contraseña incorrectos</p>
+          <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition">Ingresar</button>
+        </form>
+      </div>
+    </div>`
+}
+
+function renderInventario() {
+  if (!data) return "<div class='p-8 text-center'>Cargando...</div>"
+  const filtered = applyFilters()
+  const cats = data.categories
+  const selectedCat = cats.find(c => c.id === catFilter)
+  const subs = catFilter ? (selectedCat?.subcategories || data.subcategories.filter(s => s.categoryId === catFilter)) : []
+  const brands = data.brands
+
+  return `
+    <div class="max-w-7xl mx-auto p-4 sm:p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800">Inventario</h1>
+          <p class="text-sm text-gray-500">${filtered.length} productos</p>
+        </div>
+        <button onclick="logout()" class="text-sm text-red-600 hover:underline"><i class="fas fa-sign-out-alt mr-1"></i>Salir</button>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-4">
+        <select onchange="catFilter=this.value;render()" class="border rounded-lg px-3 py-2 text-sm">
+          <option value="">Categoría</option>
+          ${cats.map(c => `<option value="${c.id}" ${c.id===catFilter?'selected':''}>${c.name}</option>`).join("")}
+        </select>
+
+        ${subs.length ? `
+        <select onchange="subFilter=this.value;render()" class="border rounded-lg px-3 py-2 text-sm">
+          <option value="">Subcategoría</option>
+          ${subs.map(s => `<option value="${s.id}" ${s.id===subFilter?'selected':''}>${s.name}</option>`).join("")}
+        </select>` : ""}
+
+        <select onchange="brandFilter=this.value;render()" class="border rounded-lg px-3 py-2 text-sm">
+          <option value="">Marca</option>
+          ${brands.map(b => `<option value="${b.id}" ${b.id===brandFilter?'selected':''}>${b.name}</option>`).join("")}
+        </select>
+
+        <input oninput="searchTerm=this.value;render()" placeholder="Buscar..." class="border rounded-lg px-3 py-2 text-sm flex-1 min-w-[150px]">
+
+        <select onchange="const v=this.value;if(v){const[s,d]=v.split('-');sortField=s;sortDir=d}else{sortField='';sortDir='asc'};render()" class="border rounded-lg px-3 py-2 text-sm">
+          <option value="">Ordenar</option>
+          <option value="sellPrice-desc">Precio Venta ↓</option>
+          <option value="sellPrice-asc">Precio Venta ↑</option>
+          <option value="buyPrice-desc">Precio Compra ↓</option>
+          <option value="buyPrice-asc">Precio Compra ↑</option>
+          <option value="stock-desc">Stock ↓</option>
+          <option value="stock-asc">Stock ↑</option>
+        </select>
+      </div>
+
+      <div class="bg-white rounded-xl shadow overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-gray-50 border-b">
+              <th class="text-left px-4 py-3 font-semibold text-gray-600">Código</th>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600">Nombre</th>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600">Categoría</th>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600">Marca</th>
+              <th class="text-right px-4 py-3 font-semibold text-gray-600">P. Compra</th>
+              <th class="text-right px-4 py-3 font-semibold text-gray-600">P. Venta</th>
+              <th class="text-right px-4 py-3 font-semibold text-gray-600">Stock</th>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600">Ubicación</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(p => {
+              const extra = []
+              if (p.viscosity) extra.push(p.viscosity)
+              if (p.technology) extra.push(p.technology)
+              if (p.tireType) extra.push(p.tireType)
+              if (p.amperage) extra.push(p.amperage)
+              if (p.engineType) extra.push(p.engineType)
+              const extraStr = extra.length ? `<span class="text-xs text-gray-400 ml-2">${extra.join(" | ")}</span>` : ""
+              const stockClass = p.stock <= p.minStock ? "text-red-600 font-bold" : p.stock <= p.minStock * 3 ? "text-yellow-600" : "text-green-600"
+              return `<tr class="border-b hover:bg-gray-50">
+                <td class="px-4 py-2 font-mono text-xs text-blue-600">${p.code}</td>
+                <td class="px-4 py-2 font-medium">${p.name}${extraStr}</td>
+                <td class="px-4 py-2 text-gray-600">${p.category?.name || "-"}</td>
+                <td class="px-4 py-2 text-gray-600">${p.brand?.name || "-"}</td>
+                <td class="px-4 py-2 text-right">$${fmt(p.buyPrice)}</td>
+                <td class="px-4 py-2 text-right font-medium">$${fmt(p.sellPrice)}</td>
+                <td class="px-4 py-2 text-right ${stockClass}">${p.stock}</td>
+                <td class="px-4 py-2 text-gray-500 text-xs">${p.location || "-"}</td>
+              </tr>`
+            }).join("")}
+          </tbody>
+        </table>
+        ${filtered.length === 0 ? '<p class="p-8 text-center text-gray-400">Sin resultados</p>' : ""}
+      </div>
+    </div>`
+}
+
+function attachEventListeners() {}
+loadData()
+</script>
+</body>
+</html>
